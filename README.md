@@ -7,7 +7,7 @@ Histopathology WSIs of 242 thymic epithelial tumors were obtained from the publi
 ## Patch Extraction:
 A customized Yottixel script, originally developed by KimiaLab, was adopted to extract patches from tissue areas in the WSIs.
 ## Feature Extraction:
-Three models were employed to extract features from the patches: ResNet50, HistoEncoder, and Phikon.
+Three models were employed to extract features from the patches on the fly: ResNet50, HistoEncoder, and Phikon.
 ## Construction of Features Bags:
 This approach involves grouping features into bags of uniform size, each containing 200 features/instances using (torch.chunk) function.
 ## Classification Models:
@@ -21,6 +21,9 @@ The training loop was implemented in PyTorch. It includes the following techniqu
 
 
 For more information, see the original study: [10.1101/2024.06.07.24308609](https://doi.org/10.1101/2024.06.07.24308609 ).
+
+If you wish to reuse any of the codes mentioned above, please ensure to cite the original manuscript accordingly.
+
 ```bibtex
 @article {Kussaibi2024.06.07.24308609,
 	author = {Kussaibi, Haitham},
