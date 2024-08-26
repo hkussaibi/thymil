@@ -1,5 +1,5 @@
 # AI-Enhanced Subtyping of Thymic Tumors: Attention-based MIL with Pathology-Specific feature extraction
-# Method
+# Methodology
 ![flowChart](https://github.com/user-attachments/assets/054f6e7d-ef1b-4b3a-984c-afde38f5b197)
 
 ## Collection and Selection of WSIs from TCGA repositories:
