@@ -1,11 +1,16 @@
 data_transform = transforms.Compose([transforms.ToTensor()])
+
 from transformers import AutoImageProcessor, ViTModel
+
 image_processor = AutoImageProcessor.from_pretrained("owkin/phikon")
 phikon = ViTModel.from_pretrained("owkin/phikon", add_pooling_layer=False)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     phikon = nn.DataParallel(phikon)
+
 phikon = phikon.to(device)
+
 def extract_features(patches, batch_size):
     wsi_features = []
     tensors = [data_transform(patch) for patch in patches]    
