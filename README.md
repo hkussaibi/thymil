@@ -456,4 +456,4 @@ If you wish to reuse any of the codes mentioned above, please ensure to cite the
 	journal = {medRxiv}
 }
 ```
-© This code is made available under the Apache-2 License and is available for non-commercial academic purposes.
+© 2024 anapath.org This code is made available under the Apache-2 License and is available for non-commercial academic purposes.
