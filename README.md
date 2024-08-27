@@ -253,20 +253,20 @@ class MulticlassClassifier(nn.Module):
         super(MulticlassClassifier, self).__init__()
         self.inst_norm_input = nn.InstanceNorm1d(input_size)
         self.fc1 = nn.Linear(input_size, hidden_size)
-        init.xavier_uniform_(self.fc1.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        init.xavier_uniform_(self.fc1.weight, gain=nn.init.calculate_gain('relu'))
         self.relu1 = nn.ReLU()
         self.dropout1 = nn.Dropout(dropout_rate)
         
         self.fc2 = nn.Linear(hidden_size, 64)
-        init.xavier_uniform_(self.fc2.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        init.xavier_uniform_(self.fc2.weight, gain=nn.init.calculate_gain('relu'))
         self.relu2 = nn.ReLU()
         self.dropout2 = nn.Dropout(dropout_rate)
         
         self.fc3 = nn.Linear(64, num_classes)
-        init.xavier_uniform_(self.fc3.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        init.xavier_uniform_(self.fc3.weight, gain=nn.init.calculate_gain('relu'))
         
         self.attention_layer = nn.Linear(num_classes, 1)
-        init.xavier_uniform_(self.attention_layer.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        init.xavier_uniform_(self.attention_layer.weight, gain=nn.init.calculate_gain('relu'))
         
     def forward(self, x):
         x = normalize_input_data(x)
@@ -280,22 +280,163 @@ class MulticlassClassifier(nn.Module):
         instance_outputs = self.fc3(x)  # [batch_size, num_instances, num_classes]
 
         # Compute attention scores
-        attention_scores = self.attention_layer(instance_outputs).squeeze(-1)  # [batch_size, num_instances]
-        attention_scores = F.softmax(attention_scores, dim=-1)  # [batch_size, num_instances]
+        attention_scores = self.attention_layer(instance_outputs).squeeze(-1)
+        attention_scores = F.softmax(attention_scores, dim=-1)
 
         # Compute bag-level prediction using attention-based pooling
-        bag_output = torch.sum(instance_outputs * attention_scores.unsqueeze(-1), dim=1)  # [batch_size, num_classes]
+        bag_output = torch.sum(instance_outputs * attention_scores.unsqueeze(-1), dim=1)
 
         return bag_output
 ```
 ## Training Loop:
-The training loop was implemented in PyTorch. It includes the following techniques: 
-- ClassWeightedCrossEntropyLoss
-- Adam Optimizer with learning rate scheduler
-- Early Stopping
-- Cross Validation
+The training loop was implemented in PyTorch.
 ```
-coming soon
+# Create a directory to save models for each fold
+os.makedirs(f'{extractor}/{classifier_name}/', exist_ok=True)
+output_dir = f'{extractor}/{classifier_name}/'
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+
+file_handler = logging.FileHandler(f'{output_dir}training.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+```
+Class Weighted Cross Entropy Loss
+```
+class ClassWeightedCrossEntropyLoss(nn.Module):
+    def __init__(self, class_sizes, device='cuda', reduction='mean', ignore_index=-100):
+        super(ClassWeightedCrossEntropyLoss, self).__init__()
+        total_samples = sum(class_sizes)
+        class_weights = [total_samples / (len(class_sizes) * size) for size in class_sizes]
+        self.weight = torch.tensor(class_weights, dtype=torch.float32).to(device)  # Move tensor to device
+        self.reduction = reduction
+        self.ignore_index = ignore_index
+
+    def forward(self, input, target):
+        input = input  # Assuming input is a tuple (logits, ...)
+        loss = nn.functional.cross_entropy(input, target, weight=self.weight, reduction=self.reduction, ignore_index=self.ignore_index)
+        return loss
+```
+```
+class SimpleClassifierTraining:
+    def __init__(self, classifier, train_data_loader, val_data_loader, class_sizes, device='cuda'):
+        self.classifier = classifier
+        self.train_data_loader = train_data_loader
+        self.val_data_loader = val_data_loader
+        self.device = device
+        self.class_sizes = class_sizes
+
+        # Define loss function and optimizer
+        # self.criterion = nn.CrossEntropyLoss()
+        self.criterion = ClassWeightedCrossEntropyLoss(class_sizes=class_sizes)
+        self.optimizer = optim.Adam(self.classifier.parameters(), lr=0.001, weight_decay=0.001)
+
+        # Learning rate scheduler
+        self.scheduler = ReduceLROnPlateau(self.optimizer, mode='max', patience=2, verbose=True)
+
+    def train(self, num_epochs):
+        patience = 10
+        epochs_no_improve = 0
+        best_model_state = None
+        best_val_loss = float('inf')
+        for epoch in range(num_epochs):
+            # Training phase
+            self.classifier.train()
+            total_loss = 0.0
+            correct_train = 0
+            total_train = 0
+
+            for batch_features, batch_labels in tqdm.tqdm(self.train_data_loader):
+                batch_features, batch_labels = batch_features.to(self.device), batch_labels.to(self.device)
+                self.optimizer.zero_grad()
+                outputs = self.classifier(batch_features)
+                loss = self.criterion(outputs, batch_labels)
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.classifier.parameters(), max_norm=1.0)
+                self.optimizer.step()
+                total_loss += loss.item()
+
+                # Calculate accuracy
+                predicted_train = outputs.max(1)[1]
+                total_train += batch_labels.size(0)
+                correct_train += (predicted_train == batch_labels).sum().item()
+
+            average_train_loss = total_loss / len(self.train_data_loader)
+            train_accuracy = correct_train / total_train
+
+            # Validation phase
+            self.classifier.eval()
+            total_val_loss = 0.0
+            correct_val = 0
+            total_val = 0
+
+            with torch.no_grad():
+                for val_batch_features, val_batch_labels in tqdm.tqdm(self.val_data_loader):
+                    val_batch_features, val_batch_labels = val_batch_features.to(self.device), val_batch_labels.to(self.device)
+                    val_outputs = self.classifier(val_batch_features)
+                    val_loss = self.criterion(val_outputs, val_batch_labels)
+                    total_val_loss += val_loss.item()
+
+                    # Calculate validation accuracy
+                    predicted_val = val_outputs.max(1)[1]
+                    total_val += val_batch_labels.size(0)
+                    correct_val += (predicted_val == val_batch_labels).sum().item()
+
+            average_val_loss = total_val_loss / len(self.val_data_loader)
+            val_accuracy = correct_val / total_val
+
+            # Print training and validation statistics
+            logger.info(
+                f"Epoch {epoch + 1}/{num_epochs}, Training Loss: {average_train_loss:.4f}, Training Accuracy: {train_accuracy:.4f}, Validation Loss: {average_val_loss:.4f}, Validation Accuracy: {val_accuracy:.4f}")
+
+            # Learning rate scheduler step
+            self.scheduler.step(val_accuracy)
+
+            # Check for early stopping
+            if average_val_loss < best_val_loss:
+                best_val_loss = average_val_loss
+                epochs_no_improve = 0
+                best_model_state = self.classifier.state_dict()  # Save the best model state
+            else:
+                epochs_no_improve += 1
+                if epochs_no_improve == patience:
+                    logger.info("Early stopping triggered!")
+                    break
+
+        # Save the best model state after completing training for each fold
+        torch.save(best_model_state, f"{output_dir}fold_{fold}_best_model.pth")
+        print(f"Best model weights for fold {fold} saved.")
+```
+Cross Validation
+```
+
+# Specify the number of folds
+num_folds = 5  # Adjust as needed
+batch_size = 32  # Adjust as needed
+dataset = train_data
+
+# Create KFold object
+kf = KFold(n_splits=num_folds, shuffle=True, random_state=42)
+
+# Iterate over folds
+for fold, (train_idx, val_idx) in enumerate(kf.split(dataset)):
+    logger.info(f"Fold {fold + 1}/{num_folds}")
+    # Split your dataset into training and validation sets
+    train_dataset = Subset(dataset, train_idx)
+    val_dataset = Subset(dataset, val_idx)
+
+    # Create data loaders for this fold
+    train_data_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_data_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+    # With class sizes
+    trainer = SimpleClassifierTraining(classifier, train_data_loader, val_data_loader, class_sizes, device='cuda')
+
+    # Train and evaluate your model for this fold
+    trainer.train(num_epochs=100)
 ```
 
 For more information, see the original study: [10.1101/2024.06.07.24308609](https://doi.org/10.1101/2024.06.07.24308609 ).
