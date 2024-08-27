@@ -100,8 +100,6 @@ class_folders = sorted(os.listdir(wsi_folder))
 class_ = class_folders[i]
 class_path = os.path.join(wsi_folder, class_)
 for wsi_id in os.listdir(class_path):
-    # if wsi_id[:-4] in bags_wsi_ids:
-    #     continue
     wsi_path = os.path.join(class_path, wsi_id)
     slide = openslide.open_slide(wsi_path)
     thumbnail = slide.get_thumbnail((500, 500))
@@ -122,9 +120,6 @@ data_transform  = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
-import torch
-import torch.nn as nn
-from torchvision import models
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Define your ResNet50 model architecture here
@@ -186,6 +181,7 @@ from transformers import AutoImageProcessor, ViTModel
 
 image_processor = AutoImageProcessor.from_pretrained("owkin/phikon")
 phikon = ViTModel.from_pretrained("owkin/phikon", add_pooling_layer=False)
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 if torch.cuda.device_count() > 1:
     phikon = nn.DataParallel(phikon)
@@ -210,8 +206,6 @@ def extract_features(patches, batch_size):
 ## Construction of Features Bags:
 This self-developed approach involves grouping features into bags of uniform size, each containing 200 features/instances using (torch.chunk) function.
 ```
-import torch
-
 def process_data(input_paths):
     all_chunks = []
     all_labels = []
@@ -244,7 +238,9 @@ all_chunks, all_labels = process_data(input_paths)
 torch.save({'features': all_chunks, 'labels': all_labels}, 'tm_chunks200_yot_ds.pth')
 ```
 ## Classification Models:
-AttenMIL, TransMIL, and Chowder were trained for classification.
+[TransMIL] (https://github.com/szc19990412/TransMIL)
+[Chowder] (http://arxiv.org/pdf/1802.02212)
+### AttenMIL:
 ```
 coming soon
 ```
