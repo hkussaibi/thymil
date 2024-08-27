@@ -240,7 +240,7 @@ torch.save({'features': all_chunks, 'labels': all_labels}, 'tm_chunks200_yot_ds.
 ## Classification Models:
 ### [TransMIL](https://github.com/szc19990412/TransMIL)
 ### [Chowder](http://arxiv.org/pdf/1802.02212)
-### AttenMIL: ©
+### AttenMIL©
 ```
 def normalize_input_data(x, epsilon=1e-5):
     mean = x.mean()
