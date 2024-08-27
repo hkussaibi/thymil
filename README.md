@@ -238,9 +238,9 @@ all_chunks, all_labels = process_data(input_paths)
 torch.save({'features': all_chunks, 'labels': all_labels}, 'tm_chunks200_yot_ds.pth')
 ```
 ## Classification Models:
-[TransMIL](https://github.com/szc19990412/TransMIL)
-[Chowder](http://arxiv.org/pdf/1802.02212)
-### AttenMIL:
+### [TransMIL](https://github.com/szc19990412/TransMIL)
+### [Chowder](http://arxiv.org/pdf/1802.02212)
+### AttenMIL: ©
 ```
 def normalize_input_data(x, epsilon=1e-5):
     mean = x.mean()
