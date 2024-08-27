@@ -238,11 +238,55 @@ all_chunks, all_labels = process_data(input_paths)
 torch.save({'features': all_chunks, 'labels': all_labels}, 'tm_chunks200_yot_ds.pth')
 ```
 ## Classification Models:
-[TransMIL] (https://github.com/szc19990412/TransMIL)
-[Chowder] (http://arxiv.org/pdf/1802.02212)
+[TransMIL](https://github.com/szc19990412/TransMIL)
+[Chowder](http://arxiv.org/pdf/1802.02212)
 ### AttenMIL:
 ```
-coming soon
+def normalize_input_data(x, epsilon=1e-5):
+    mean = x.mean()
+    std = x.std(unbiased=False) + epsilon  # Adding epsilon to avoid division by zero
+    normalized_x = (x - mean) / std
+    return normalized_x
+
+class MulticlassClassifier(nn.Module):
+    def __init__(self, input_size=768, hidden_size=128, num_classes=6, dropout_rate=0.5):
+        super(MulticlassClassifier, self).__init__()
+        self.inst_norm_input = nn.InstanceNorm1d(input_size)
+        self.fc1 = nn.Linear(input_size, hidden_size)
+        init.xavier_uniform_(self.fc1.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        self.relu1 = nn.ReLU()
+        self.dropout1 = nn.Dropout(dropout_rate)
+        
+        self.fc2 = nn.Linear(hidden_size, 64)
+        init.xavier_uniform_(self.fc2.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        self.relu2 = nn.ReLU()
+        self.dropout2 = nn.Dropout(dropout_rate)
+        
+        self.fc3 = nn.Linear(64, num_classes)
+        init.xavier_uniform_(self.fc3.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        
+        self.attention_layer = nn.Linear(num_classes, 1)
+        init.xavier_uniform_(self.attention_layer.weight, gain=nn.init.calculate_gain('relu'))  # Improved initialization
+        
+    def forward(self, x):
+        x = normalize_input_data(x)
+        x = self.inst_norm_input(x)
+        x = self.fc1(x)
+        x = self.relu1(x)
+        x = self.dropout1(x)
+        x = self.fc2(x)
+        x = self.relu2(x)
+        x = self.dropout2(x)
+        instance_outputs = self.fc3(x)  # [batch_size, num_instances, num_classes]
+
+        # Compute attention scores
+        attention_scores = self.attention_layer(instance_outputs).squeeze(-1)  # [batch_size, num_instances]
+        attention_scores = F.softmax(attention_scores, dim=-1)  # [batch_size, num_instances]
+
+        # Compute bag-level prediction using attention-based pooling
+        bag_output = torch.sum(instance_outputs * attention_scores.unsqueeze(-1), dim=1)  # [batch_size, num_classes]
+
+        return bag_output
 ```
 ## Training Loop:
 The training loop was implemented in PyTorch. It includes the following techniques: 
@@ -270,3 +314,5 @@ If you wish to reuse any of the codes mentioned above, please ensure to cite the
 	eprint = {https://www.medrxiv.org/content/early/2024/08/17/2024.06.07.24308609.full.pdf},
 	journal = {medRxiv}
 }
+```
+© This code is made available under the Apache-2 License and is available for non-commercial academic purposes.
