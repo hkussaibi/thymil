@@ -4,21 +4,22 @@
 
 ## step1 Collection and Selection of WSIs from TCGA repositories:
 Histopathology WSIs of 242 thymic epithelial tumors were obtained from the publicly accessible TCGA database (https://www.cancer.gov/tcga). These WSIs varied in size, ranging from 51 MB to 3.4 GB. The WSIs were categorized into six distinct subtypes/classes, with slide-level labels provided.
-## Patch Extraction:
+## step2 Patch Extraction:
 A customized [Yottixel](https://github.com/KimiaLabMayo/yottixel) script, originally developed by KimiaLab, was adopted to extract patches from tissue areas in the WSIs.
 
-## step2 Feature Extraction:
+## step3 Feature Extraction:
 The following script has been developed to extract patches from WSIs, using the above Yottixel function, then to extract features from the produced patches on the fly (withous saving).
 Three different models were employed to extract features:
 ### ResNet50
 ### [HistoEncoder](https://github.com/jopo666/HistoEncoder)
 ### [Phikon](https://github.com/owkin/HistoSSLscaling)
-## step3 Construction of Features Bags:
+## step4 Construction of Features Bags:
 ## Classification Models:
 ### [TransMIL](https://github.com/szc19990412/TransMIL)
 ### [Chowder](http://arxiv.org/pdf/1802.02212)
 ### [AttenMIL©]()
-## step4 Training:
+## step5 Training:
+## step6 Evaluation:
 
 For more information, see the original study: [10.1101/2024.06.07.24308609](https://doi.org/10.1101/2024.06.07.24308609 ).
 
