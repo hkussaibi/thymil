@@ -1,0 +1,19 @@
+
+
+| **Parameter**                | **Value/Method**                                | **Description/Notes** |
+|------------------------------|------------------------------------------------|----------------------|
+| **Dataset Split**            | 80:20 (Training:Test)                          | Stratified split ensuring proportional representation of all tumor subtypes. |
+| **Cross-Validation**         | 5-Fold                                        | Five equally sized folds used for training and validation. |
+| **Batch Size**               | 16                                            | Number of bags processed per iteration in the training loop. |
+| **Number of Epochs**         | 100                                           | Maximum training epochs; early stopping applied with patience set to 10 epochs. |
+| **Optimizer**                | Adam                                          | Standard Adam optimizer; learning rate scheduled to reduce on plateau. |
+| **Initial Learning Rate**    | 0.001                                         | Base learning rate for Adam. |
+| **Learning Rate Scheduler**  | Reduce on Plateau (patience=3)                | Monitors validation performance and reduces LR if no improvement is observed for 3 epochs. |
+| **Dropout Rate**             | 0.5 (varied per module)                        | Applied within both the feature projection module and classifier layers to mitigate overfitting. |
+| **Number of Attention Heads**| 4                                             | Used in the multi-head attention module of LiteMIL. |
+| **Activation Function**      | GELU                                          | Used in the classifier to introduce non-linearity; GELU was chosen based on its smoother gradient properties in handling subtle histopathological features. |
+| **Weight Initialization**    | Kaiming Uniform (He Initialization)           | Applied to all linear layers to ensure stable convergence at the start of training. |
+| **Random Seed**              | 42                                            | Fixed seed for all experiments to ensure reproducibility. |
+| **Data Normalization**       | Mean=[0.485, 0.456, 0.406] Std=[0.229, 0.224, 0.225] | Standard normalization applied to image patches prior to feature extraction (ResNet50) or as specified by the dedicated preprocessing function (Phikon). |
+| **Patch Resize**             | 224×224 pixels                                | All patches are resized to meet the input requirements of the feature extraction models. |
+| **Chunking Strategy**        | `torch.chunk()` to a fixed size (1k examples) | WSIs are divided into uniform bags using chunking to mitigate the impact of variably sized inputs and reduce the need for padding. |
